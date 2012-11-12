@@ -17,19 +17,19 @@
 #  [auto_assign_floating_ip] Rather configured to automatically allocate and
 #   assign a floating IP address to virtual instances when they are launched.
 #   Defaults to false.
-#  [network_config] Used to specify network manager specific parameters .Optional. Defualts to {}.
-#  [mysql_root_password] The root password to set for the mysql database. Optional. Defaults to sql_pass'.
-#  [rabbit_password] The password to use for the rabbitmq user. Optional. Defaults to rabbit_pw'
-#  [rabbit_user] The rabbitmq user to use for auth. Optional. Defaults to nova'.
-#  [admin_email] The admin's email address. Optional. Defaults to someuser@some_fake_email_address.foo'.
-#  [admin_password] The default password of the keystone admin. Optional. Defaults to ChangeMe'.
-#  [keystone_db_password] The default password for the keystone db user. Optional. Defaults to keystone_pass'.
-#  [keystone_admin_token] The default auth token for keystone. Optional. Defaults to keystone_admin_token'.
-#  [nova_db_password] The nova db password. Optional. Defaults to nova_pass'.
-#  [nova_user_password] The password of the keystone user for the nova service. Optional. Defaults to nova_pass'.
-#  [glance_db_password] The password for the db user for glance. Optional. Defaults to 'glance_pass'.
-#  [glance_user_password] The password of the glance service user. Optional. Defaults to 'glance_pass'.
-#  [secret_key] The secret key for horizon. Optional. Defaults to 'dummy_secret_key'.
+#  [network_config] Used to specify network manager specific parameters. Optional. Defualts to {}.
+#  [mysql_root_password] The root password to set for the mysql database.
+#  [rabbit_password] The password to use for the rabbitmq user.
+#  [rabbit_user] The rabbitmq user to use for auth. Optional. Defaults to 'nova'.
+#  [admin_email] The admin's email address.
+#  [admin_password] The default password of the keystone admin.
+#  [keystone_db_password] The default password for the keystone db user.
+#  [keystone_admin_token] The default auth token for keystone.
+#  [nova_db_password] The nova db password.
+#  [nova_user_password] The password of the keystone user for the nova service.
+#  [glance_db_password] The password for the db user for glance.
+#  [glance_user_password] The password of the glance service user.
+#  [secret_key] The secret key for horizon.
 #  [verbose] If the services should log verbosely. Optional. Defaults to false.
 #  [purge_nova_config] Whether unmanaged nova.conf entries should be purged. Optional. Defaults to true.
 #  [libvirt_type] The virualization type being controlled by libvirt.  Optional. Defaults to 'kvm'.
@@ -290,26 +290,28 @@ class openstack::all (
 
     class { 'quantum::plugins::ovs':
       sql_connection      => $quantum_sql_connection,
-      tenant_network_type => 'gre',
-      # I need to know what this does...
-      local_ip            => '10.0.0.1',
-      enable_tunneling    => true,
+      tenant_network_type => 'vlan',
+      bridge_mappings     => ['default:br-virtual'],
+      network_vlan_ranges => 'default:1000:1999',
+      tunnel_id_ranges    => '',
+      enable_tunneling    => false,
     }
 
     class { 'quantum::agents::ovs':
       bridge_uplinks => ["br-virtual:${private_interface}"],
+      local_ip       => $internal_address
     }
 
     class { 'nova::network::quantum':
-    #$fixed_range,
+      fixed_range               => $fixed_range,
       quantum_admin_password    => $quantum_user_password,
-    #$use_dhcp                  = 'True',
-    #$public_interface          = undef,
+      use_dhcp                  => 'True',
+      public_interface          => $public_interface,
       quantum_connection_host   => 'localhost',
       quantum_auth_strategy     => 'keystone',
       quantum_url               => "http://127.0.0.1:9696",
       quantum_admin_tenant_name => 'services',
-      #quantum_admin_username    => 'quantum',
+      #quantum_admin_username   => 'quantum',
       quantum_admin_auth_url    => "http://127.0.0.1:35357/v2.0",
     }
   }
