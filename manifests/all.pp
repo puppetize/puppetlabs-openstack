@@ -8,7 +8,8 @@
 #  [public_address] Public address used by vnchost. Required.
 #  [public_interface] The interface used to route public traffic by the
 #    network service.
-#  [private_interface] The private interface used to bridge the VMs into a common network.
+#  [private_interface] The private interface used to bridge the VMs into a
+#   common network. Optional for a single-node setup. Defaults to false.
 #  [floating_range] The floating ip range to be created. If it is false, then no floating ip range is created.
 #    Optional. Defaults to false.
 #  [fixed_range] The fixed private ip range to be created for the private VM network. Optional. Defaults to '10.0.0.0/24'.
@@ -61,7 +62,6 @@ class openstack::all (
   # Required Network
   $public_address,
   $public_interface,
-  $private_interface,
   $admin_email,
   # required password
   $mysql_root_password,
@@ -75,6 +75,7 @@ class openstack::all (
   $nova_user_password,
   $secret_key,
   $internal_address = '127.0.0.1',
+  $private_interface = false,
   # cinder and quantum password are not required b/c they are
   # optional. Not sure what to do about this.
   $cinder_user_password    = 'cinder_pass',
@@ -251,6 +252,11 @@ class openstack::all (
   }
 
   if $quantum == false {
+    if ! $private_interface {
+      # Oh, really?  This is just because I don't know it better.
+      fail('private_interface must be specified when using nova::network')
+    }
+
     # Configure nova-network
     class { 'nova::network':
       private_interface => $private_interface,
@@ -297,8 +303,14 @@ class openstack::all (
       enable_tunneling    => false,
     }
 
+    if $private_interface {
+      $bridge_uplinks = ["br-virtual:${private_interface}"]
+    } else {
+      $bridge_uplinks = []
+    }
+
     class { 'quantum::agents::ovs':
-      bridge_uplinks => ["br-virtual:${private_interface}"],
+      bridge_uplinks => $bridge_uplinks,
       local_ip       => $internal_address
     }
 
