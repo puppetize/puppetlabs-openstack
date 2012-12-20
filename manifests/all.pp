@@ -107,6 +107,8 @@ class openstack::all (
   $auto_assign_floating_ip = false,
   $network_config          = {},
   $quantum                 = true,
+  $network_vlan_ranges     = 'default:1000:1999',
+  $bridge_mappings         = ['default:br-virtual'],
   # Rabbit
   $rabbit_user             = 'nova',
   # Horizon
@@ -297,8 +299,8 @@ class openstack::all (
     class { 'quantum::plugins::ovs':
       sql_connection      => $quantum_sql_connection,
       tenant_network_type => 'vlan',
-      bridge_mappings     => ['default:br-virtual'],
-      network_vlan_ranges => 'default:1000:1999',
+      bridge_mappings     => $bridge_mappings,
+      network_vlan_ranges => $network_vlan_ranges,
       tunnel_id_ranges    => '',
       enable_tunneling    => false,
     }
